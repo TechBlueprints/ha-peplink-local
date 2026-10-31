@@ -45,6 +45,14 @@
           "username": "Username",
           "password": "Password"
         }
+      },
+      "reconfigure_ap_one": {
+        "title": "Reconfigure Peplink AP One",
+        "description": "Change the access point's address or SNMP community.",
+        "data": {
+          "host": "IP Address",
+          "community": "SNMP community"
+        }
       }
     },
     "error": {

@@ -187,6 +187,8 @@ class PeplinkLocalConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     ) -> FlowResult:
         """Change the address or login of a router, e.g. to an admin login for controls."""
         entry = self._get_reconfigure_entry()
+        if entry.data.get(CONF_DEVICE_TYPE) == DEVICE_TYPE_AP_ONE:
+            return await self.async_step_reconfigure_ap_one(user_input)
         defaults = {**entry.data, **(user_input or {})}
         schema = vol.Schema({
             vol.Required(CONF_HOST, default=defaults.get(CONF_HOST, "")): str,
@@ -199,6 +201,26 @@ class PeplinkLocalConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return await self._async_validate_and_update(
             entry, {**entry.data, **user_input}, "reconfigure", schema
         )
+
+    async def async_step_reconfigure_ap_one(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Change an AP One's address or SNMP community."""
+        entry = self._get_reconfigure_entry()
+        defaults = {**entry.data, **(user_input or {})}
+        schema = vol.Schema({
+            vol.Required(CONF_HOST, default=defaults.get(CONF_HOST, "")): str,
+            vol.Required(CONF_COMMUNITY, default=defaults.get(CONF_COMMUNITY, DEFAULT_COMMUNITY)): str,
+        })
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            try:
+                await async_probe_ap_one(user_input[CONF_HOST], user_input[CONF_COMMUNITY])
+            except Exception:  # pylint: disable=broad-except
+                errors["base"] = "cannot_connect"
+            else:
+                return self.async_update_reload_and_abort(entry, data={**entry.data, **user_input})
+        return self.async_show_form(step_id="reconfigure_ap_one", data_schema=schema, errors=errors)
 
     async def async_step_reauth(self, entry_data: dict[str, Any]) -> FlowResult:
         """Start re-authentication after the router rejected the stored login."""
